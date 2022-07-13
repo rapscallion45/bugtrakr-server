@@ -1,11 +1,20 @@
-import { Entity, Column } from 'typeorm';
-import BaseModel from './BaseModel';
+import { Entity, Column } from "typeorm";
+import BaseModel from "./BaseModel";
 
-@Entity({ name: 'users' })
+@Entity({ name: "users" })
 export class User extends BaseModel {
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: "varchar", length: 20 })
   username: string;
 
   @Column()
   passwordHash: string;
+
+  @Column()
+  email: string;
+
+  @Column()
+  firstName: string;
+
+  @Column()
+  lastName: string;
 }

@@ -6,7 +6,7 @@ import { JWT_SECRET } from "../utils/config";
 import { registerValidator, loginValidator } from "../utils/validators";
 
 export const signupUser = async (req: Request, res: Response) => {
-  const { username, password } = req.body;
+  const { username, password, email, firstName, lastName } = req.body;
   const { errors, valid } = registerValidator(username, password);
 
   if (!valid) {
@@ -23,10 +23,26 @@ export const signupUser = async (req: Request, res: Response) => {
       .send({ message: `Username '${username}' is already taken.` });
   }
 
+  const existingEmail = await User.findOne({
+    where: `"email" ILIKE '${email}'`,
+  });
+
+  if (existingEmail) {
+    return res
+      .status(401)
+      .send({ message: `Email '${email}' is already registered with us.` });
+  }
+
   const saltRounds = 10;
   const passwordHash = await bcrypt.hash(password, saltRounds);
 
-  const user = User.create({ username, passwordHash });
+  const user = User.create({
+    username,
+    passwordHash,
+    email,
+    firstName,
+    lastName,
+  });
   await user.save();
 
   const token = jwt.sign(
