@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
-import { User } from '../entity/User';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-import { JWT_SECRET } from '../utils/config';
-import { registerValidator, loginValidator } from '../utils/validators';
+import { Request, Response } from "express";
+import { User } from "../entity/User";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import { JWT_SECRET } from "../utils/config";
+import { registerValidator, loginValidator } from "../utils/validators";
 
 export const signupUser = async (req: Request, res: Response) => {
   const { username, password } = req.body;
@@ -57,13 +57,17 @@ export const loginUser = async (req: Request, res: Response) => {
   });
 
   if (!user) {
-    return res.status(401).send({ message: `User: '${username}' not found.` });
+    return res.status(401).send({
+      message: `We cannot find a username or email matching '${username}'. Please check and try again.`,
+    });
   }
 
   const credentialsValid = await bcrypt.compare(password, user.passwordHash);
 
   if (!credentialsValid) {
-    return res.status(401).send({ message: 'Invalid credentials.' });
+    return res
+      .status(401)
+      .send({ message: "Login failed, please check your credentials." });
   }
 
   const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
