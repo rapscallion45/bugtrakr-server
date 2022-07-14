@@ -4,7 +4,7 @@ import { Not } from "typeorm";
 
 export const getAllUsers = async (req: Request, res: Response) => {
   const users = await User.find({
-    where: { id: Not(req.user) },
+    where: { id: Not(req.userId) },
     select: ["id", "username"],
   });
 

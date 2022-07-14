@@ -1,31 +1,31 @@
-import { Request, Response } from 'express';
-import { Project } from '../entity/Project';
-import { Member } from '../entity/Member';
-import { Bug } from '../entity/Bug';
-import { createProjectValidator, projectNameError } from '../utils/validators';
+import { Request, Response } from "express";
+import { Project } from "../entity/Project";
+import { Member } from "../entity/Member";
+import { Bug } from "../entity/Bug";
+import { createProjectValidator, projectNameError } from "../utils/validators";
 
 const fieldsToSelect = [
-  'project.id',
-  'project.name',
-  'project.createdAt',
-  'project.updatedAt',
-  'createdBy.id',
-  'createdBy.username',
-  'members.id',
-  'members.joinedAt',
-  'member.id',
-  'member.username',
-  'bug.id',
+  "project.id",
+  "project.name",
+  "project.createdAt",
+  "project.updatedAt",
+  "createdBy.id",
+  "createdBy.username",
+  "members.id",
+  "members.joinedAt",
+  "member.id",
+  "member.username",
+  "bug.id",
 ];
 
 export const getProjects = async (req: Request, res: Response) => {
-  const projects = await Project.createQueryBuilder('project')
-    .leftJoin('project.members', 'projectMember')
-    .where('projectMember.memberId = :userId', { userId: req.user })
-    .leftJoinAndSelect('project.members', 'members')
-    .leftJoinAndSelect('project.createdBy', 'createdBy')
-    .leftJoinAndSelect('members.member', 'member')
-    .leftJoinAndSelect('project.bugs', 'bug')
+  const projects = await Project.createQueryBuilder("project")
+    .leftJoin("project.members", "projectMember")
+    .where("projectMember.memberId = :userId", { userId: req.userId })
+    .leftJoinAndSelect("project.members", "members")
+    .leftJoinAndSelect("project.createdBy", "createdBy")
+    .leftJoinAndSelect("members.member", "member")
+    .leftJoinAndSelect("project.bugs", "bug")
     .select(fieldsToSelect)
     .getMany();
 
@@ -35,8 +35,8 @@ export const getProjects = async (req: Request, res: Response) => {
 export const createProject = async (req: Request, res: Response) => {
   const { name } = req.body;
   const memberIds = req.body.members
-    ? ([req.user, ...req.body.members] as string[])
-    : [req.user];
+    ? ([req.userId, ...req.body.members] as string[])
+    : [req.userId];
 
   const { errors, valid } = createProjectValidator(name, memberIds);
 
@@ -46,7 +46,7 @@ export const createProject = async (req: Request, res: Response) => {
 
   const newProject = Project.create({
     name,
-    createdById: req.user,
+    createdById: req.userId,
   });
 
   await newProject.save();
@@ -58,12 +58,12 @@ export const createProject = async (req: Request, res: Response) => {
 
   await Member.insert(membersArray);
 
-  const relationedProject = await Project.createQueryBuilder('project')
-    .where('project.id = :projectId', { projectId: newProject.id })
-    .leftJoinAndSelect('project.members', 'members')
-    .leftJoinAndSelect('project.createdBy', 'createdBy')
-    .leftJoinAndSelect('members.member', 'member')
-    .leftJoinAndSelect('project.bugs', 'bug')
+  const relationedProject = await Project.createQueryBuilder("project")
+    .where("project.id = :projectId", { projectId: newProject.id })
+    .leftJoinAndSelect("project.members", "members")
+    .leftJoinAndSelect("project.createdBy", "createdBy")
+    .leftJoinAndSelect("members.member", "member")
+    .leftJoinAndSelect("project.bugs", "bug")
     .select(fieldsToSelect)
     .getOne();
 
@@ -83,11 +83,11 @@ export const editProjectName = async (req: Request, res: Response) => {
   const targetProject = await Project.findOne({ id: projectId });
 
   if (!targetProject) {
-    return res.status(404).send({ message: 'Invalid project ID.' });
+    return res.status(404).send({ message: "Invalid project ID." });
   }
 
-  if (targetProject.createdById !== req.user) {
-    return res.status(401).send({ message: 'Access is denied.' });
+  if (targetProject.createdById !== req.userId) {
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   targetProject.name = name;
@@ -101,11 +101,11 @@ export const deleteProject = async (req: Request, res: Response) => {
   const targetProject = await Project.findOne({ id: projectId });
 
   if (!targetProject) {
-    return res.status(404).send({ message: 'Invalid project ID.' });
+    return res.status(404).send({ message: "Invalid project ID." });
   }
 
-  if (targetProject.createdById !== req.user) {
-    return res.status(401).send({ message: 'Access is denied.' });
+  if (targetProject.createdById !== req.userId) {
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   await Member.delete({ projectId });

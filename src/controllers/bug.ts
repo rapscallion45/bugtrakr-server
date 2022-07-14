@@ -38,7 +38,7 @@ export const getBugs = async (req: Request, res: Response) => {
 
   const projectMembers = await Member.find({ projectId });
 
-  if (!projectMembers.map((m) => m.memberId).includes(req.user)) {
+  if (!projectMembers.map((m) => m.memberId).includes(req.userId)) {
     return res.status(401).send({ message: "Access is denied." });
   }
 
@@ -86,7 +86,7 @@ export const createBug = async (req: Request, res: Response) => {
   const projectMembers = await Member.find({ projectId });
   const memberIds = projectMembers.map((m) => m.memberId);
 
-  if (!memberIds.includes(req.user)) {
+  if (!memberIds.includes(req.userId)) {
     return res.status(401).send({ message: "Access is denied." });
   }
 
@@ -95,7 +95,7 @@ export const createBug = async (req: Request, res: Response) => {
     description,
     priority,
     projectId,
-    createdById: req.user,
+    createdById: req.userId,
   });
   await newBug.save();
 
@@ -126,7 +126,7 @@ export const updateBug = async (req: Request, res: Response) => {
   const projectMembers = await Member.find({ projectId });
   const memberIds = projectMembers.map((m) => m.memberId);
 
-  if (!memberIds.includes(req.user)) {
+  if (!memberIds.includes(req.userId)) {
     return res.status(401).send({ message: "Access is denied." });
   }
 
@@ -139,7 +139,7 @@ export const updateBug = async (req: Request, res: Response) => {
   targetBug.title = title;
   targetBug.description = description;
   targetBug.priority = priority;
-  targetBug.updatedById = req.user;
+  targetBug.updatedById = req.userId;
   targetBug.updatedAt = new Date();
 
   await targetBug.save();
@@ -175,8 +175,8 @@ export const deleteBug = async (req: Request, res: Response) => {
   }
 
   if (
-    targetProject.createdById !== req.user &&
-    targetBug.createdById !== req.user
+    targetProject.createdById !== req.userId &&
+    targetBug.createdById !== req.userId
   ) {
     return res.status(401).send({ message: "Access is denied." });
   }
@@ -192,7 +192,7 @@ export const closeBug = async (req: Request, res: Response) => {
   const projectMembers = await Member.find({ projectId });
   const memberIds = projectMembers.map((m) => m.memberId);
 
-  if (!memberIds.includes(req.user)) {
+  if (!memberIds.includes(req.userId)) {
     return res.status(401).send({ message: "Access is denied." });
   }
 
@@ -209,7 +209,7 @@ export const closeBug = async (req: Request, res: Response) => {
   }
 
   targetBug.isResolved = true;
-  targetBug.closedById = req.user;
+  targetBug.closedById = req.userId;
   targetBug.closedAt = new Date();
   targetBug.reopenedById = null;
   targetBug.reopenedAt = null;
@@ -235,7 +235,7 @@ export const reopenBug = async (req: Request, res: Response) => {
   const projectMembers = await Member.find({ projectId });
   const memberIds = projectMembers.map((m) => m.memberId);
 
-  if (!memberIds.includes(req.user)) {
+  if (!memberIds.includes(req.userId)) {
     return res.status(401).send({ message: "Access is denied." });
   }
 
@@ -252,7 +252,7 @@ export const reopenBug = async (req: Request, res: Response) => {
   }
 
   targetBug.isResolved = false;
-  targetBug.reopenedById = req.user;
+  targetBug.reopenedById = req.userId;
   targetBug.reopenedAt = new Date();
   targetBug.closedById = null;
   targetBug.closedAt = null;

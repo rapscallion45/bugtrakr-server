@@ -1,41 +1,41 @@
-import { Request, Response } from 'express';
-import { Member } from '../entity/Member';
-import { Note } from '../entity/Note';
-import { Project } from '../entity/Project';
+import { Request, Response } from "express";
+import { Member } from "../entity/Member";
+import { Note } from "../entity/Note";
+import { Project } from "../entity/Project";
 
 export const postNote = async (req: Request, res: Response) => {
   const { body } = req.body;
   const { projectId, bugId } = req.params;
 
-  if (!body || body.trim() === '') {
+  if (!body || body.trim() === "") {
     return res
       .status(400)
-      .send({ message: 'Note body field must not be empty.' });
+      .send({ message: "Note body field must not be empty." });
   }
 
   const projectMembers = await Member.find({ projectId });
   const memberIds = projectMembers.map((m) => m.memberId);
 
-  if (!memberIds.includes(req.user)) {
+  if (!memberIds.includes(req.userId)) {
     return res
       .status(401)
-      .send({ message: 'Access is denied. Not a member of the project.' });
+      .send({ message: "Access is denied. Not a member of the project." });
   }
 
-  const newNote = Note.create({ body, authorId: req.user, bugId });
+  const newNote = Note.create({ body, authorId: req.userId, bugId });
   await newNote.save();
 
-  const relationedNote = await Note.createQueryBuilder('note')
-    .where('note.id = :noteId', { noteId: newNote.id })
-    .leftJoinAndSelect('note.author', 'author')
+  const relationedNote = await Note.createQueryBuilder("note")
+    .where("note.id = :noteId", { noteId: newNote.id })
+    .leftJoinAndSelect("note.author", "author")
     .select([
-      'note.id',
-      'note.bugId',
-      'note.body',
-      'note.createdAt',
-      'note.updatedAt',
-      'author.id',
-      'author.username',
+      "note.id",
+      "note.bugId",
+      "note.body",
+      "note.createdAt",
+      "note.updatedAt",
+      "author.id",
+      "author.username",
     ])
     .getOne();
 
@@ -47,32 +47,32 @@ export const deleteNote = async (req: Request, res: Response) => {
 
   const targetProject = await Project.findOne({
     where: { id: projectId },
-    relations: ['members'],
+    relations: ["members"],
   });
 
   if (!targetProject) {
-    return res.status(404).send({ message: 'Invalid project ID.' });
+    return res.status(404).send({ message: "Invalid project ID." });
   }
 
   const memberIds = targetProject.members.map((m) => m.memberId);
 
-  if (!memberIds.includes(req.user)) {
+  if (!memberIds.includes(req.userId)) {
     return res
       .status(401)
-      .send({ message: 'Access is denied. Not a member of the project.' });
+      .send({ message: "Access is denied. Not a member of the project." });
   }
 
   const targetNote = await Note.findOne({ id: Number(noteId) });
 
   if (!targetNote) {
-    return res.status(404).send({ message: 'Invalid note ID.' });
+    return res.status(404).send({ message: "Invalid note ID." });
   }
 
   if (
-    targetNote.authorId !== req.user &&
-    targetProject.createdById !== req.user
+    targetNote.authorId !== req.userId &&
+    targetProject.createdById !== req.userId
   ) {
-    return res.status(401).send({ message: 'Access is denied.' });
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   await targetNote.remove();
@@ -83,29 +83,29 @@ export const updateNote = async (req: Request, res: Response) => {
   const { body } = req.body;
   const { projectId, noteId } = req.params;
 
-  if (!body || body.trim() === '') {
+  if (!body || body.trim() === "") {
     return res
       .status(400)
-      .send({ message: 'Note body field must not be empty.' });
+      .send({ message: "Note body field must not be empty." });
   }
 
   const projectMembers = await Member.find({ projectId });
   const memberIds = projectMembers.map((m) => m.memberId);
 
-  if (!memberIds.includes(req.user)) {
+  if (!memberIds.includes(req.userId)) {
     return res
       .status(401)
-      .send({ message: 'Access is denied. Not a member of the project.' });
+      .send({ message: "Access is denied. Not a member of the project." });
   }
 
   const targetNote = await Note.findOne({ id: Number(noteId) });
 
   if (!targetNote) {
-    return res.status(404).send({ message: 'Invalid note ID.' });
+    return res.status(404).send({ message: "Invalid note ID." });
   }
 
-  if (targetNote.authorId !== req.user) {
-    return res.status(401).send({ message: 'Access is denied.' });
+  if (targetNote.authorId !== req.userId) {
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   targetNote.body = body;

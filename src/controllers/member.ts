@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
-import { Project } from '../entity/Project';
-import { Member } from '../entity/Member';
-import { projectMembersError } from '../utils/validators';
+import { Request, Response } from "express";
+import { Project } from "../entity/Project";
+import { Member } from "../entity/Member";
+import { projectMembersError } from "../utils/validators";
 
 export const addProjectMembers = async (req: Request, res: Response) => {
   const memberIds = req.body.members as string[];
@@ -10,20 +10,20 @@ export const addProjectMembers = async (req: Request, res: Response) => {
   if (memberIds.length === 0) {
     return res
       .status(400)
-      .send({ message: 'Members field must not be an empty array.' });
+      .send({ message: "Members field must not be an empty array." });
   }
 
   const targetProject = await Project.findOne({
     where: { id: projectId },
-    relations: ['members'],
+    relations: ["members"],
   });
 
   if (!targetProject) {
-    return res.status(404).send({ message: 'Invalid project ID.' });
+    return res.status(404).send({ message: "Invalid project ID." });
   }
 
-  if (targetProject.createdById !== req.user) {
-    return res.status(401).send({ message: 'Access is denied.' });
+  if (targetProject.createdById !== req.userId) {
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   const currentMembers = targetProject.members.map((m) => m.memberId);
@@ -44,14 +44,14 @@ export const addProjectMembers = async (req: Request, res: Response) => {
 
   await Member.insert(membersArray);
 
-  const updatedMembers = await Member.createQueryBuilder('projectMember')
-    .leftJoinAndSelect('projectMember.member', 'member')
-    .where('projectMember.projectId = :projectId', { projectId })
+  const updatedMembers = await Member.createQueryBuilder("projectMember")
+    .leftJoinAndSelect("projectMember.member", "member")
+    .where("projectMember.projectId = :projectId", { projectId })
     .select([
-      'projectMember.id',
-      'projectMember.joinedAt',
-      'member.id',
-      'member.username',
+      "projectMember.id",
+      "projectMember.joinedAt",
+      "member.id",
+      "member.username",
     ])
     .getMany();
 
@@ -63,15 +63,15 @@ export const removeProjectMember = async (req: Request, res: Response) => {
 
   const targetProject = await Project.findOne({
     where: { id: projectId },
-    relations: ['members'],
+    relations: ["members"],
   });
 
   if (!targetProject) {
-    return res.status(404).send({ message: 'Invalid project ID.' });
+    return res.status(404).send({ message: "Invalid project ID." });
   }
 
-  if (targetProject.createdById !== req.user) {
-    return res.status(401).send({ message: 'Access is denied.' });
+  if (targetProject.createdById !== req.userId) {
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   if (targetProject.createdById === memberId) {
@@ -95,23 +95,23 @@ export const leaveProjectAsMember = async (req: Request, res: Response) => {
 
   const targetProject = await Project.findOne({
     where: { id: projectId },
-    relations: ['members'],
+    relations: ["members"],
   });
 
   if (!targetProject) {
-    return res.status(404).send({ message: 'Invalid project ID.' });
+    return res.status(404).send({ message: "Invalid project ID." });
   }
 
-  if (targetProject.createdById === req.user) {
+  if (targetProject.createdById === req.userId) {
     return res.status(400).send({ message: "Project creator can't leave." });
   }
 
-  if (!targetProject.members.map((m) => m.memberId).includes(req.user)) {
+  if (!targetProject.members.map((m) => m.memberId).includes(req.userId)) {
     return res.status(404).send({
       message: "You're not a member of the project.",
     });
   }
 
-  await Member.delete({ projectId, memberId: req.user });
+  await Member.delete({ projectId, memberId: req.userId });
   res.status(204).end();
 };
