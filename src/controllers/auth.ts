@@ -95,22 +95,25 @@ export const loginUser = async (req: Request, res: Response) => {
 };
 
 export const authenticateUser = async (req: Request, res: Response) => {
-  const { username } = req;
+  const { user } = req;
 
-  const user = await User.findOne({
-    where: `"username" ILIKE '${username}'`,
+  const userData = await User.findOne({
+    where: { id: user },
   });
 
-  if (!user) {
+  if (!userData) {
     return res.status(401).send({
-      message: `Username '${username}' not found.`,
+      message: `User not found.`,
     });
   }
 
-  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
+  const token = jwt.sign(
+    { id: userData.id, username: userData.username },
+    JWT_SECRET
+  );
   return res.status(201).json({
-    id: user.id,
-    username: user.username,
+    id: userData.id,
+    username: userData.username,
     token,
   });
 };

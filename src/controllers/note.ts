@@ -16,13 +16,13 @@ export const postNote = async (req: Request, res: Response) => {
   const projectMembers = await Member.find({ projectId });
   const memberIds = projectMembers.map((m) => m.memberId);
 
-  if (!memberIds.includes(req.userId)) {
+  if (!memberIds.includes(req.user)) {
     return res
       .status(401)
       .send({ message: "Access is denied. Not a member of the project." });
   }
 
-  const newNote = Note.create({ body, authorId: req.userId, bugId });
+  const newNote = Note.create({ body, authorId: req.user, bugId });
   await newNote.save();
 
   const relationedNote = await Note.createQueryBuilder("note")
@@ -56,7 +56,7 @@ export const deleteNote = async (req: Request, res: Response) => {
 
   const memberIds = targetProject.members.map((m) => m.memberId);
 
-  if (!memberIds.includes(req.userId)) {
+  if (!memberIds.includes(req.user)) {
     return res
       .status(401)
       .send({ message: "Access is denied. Not a member of the project." });
@@ -69,8 +69,8 @@ export const deleteNote = async (req: Request, res: Response) => {
   }
 
   if (
-    targetNote.authorId !== req.userId &&
-    targetProject.createdById !== req.userId
+    targetNote.authorId !== req.user &&
+    targetProject.createdById !== req.user
   ) {
     return res.status(401).send({ message: "Access is denied." });
   }
@@ -92,7 +92,7 @@ export const updateNote = async (req: Request, res: Response) => {
   const projectMembers = await Member.find({ projectId });
   const memberIds = projectMembers.map((m) => m.memberId);
 
-  if (!memberIds.includes(req.userId)) {
+  if (!memberIds.includes(req.user)) {
     return res
       .status(401)
       .send({ message: "Access is denied. Not a member of the project." });
@@ -104,7 +104,7 @@ export const updateNote = async (req: Request, res: Response) => {
     return res.status(404).send({ message: "Invalid note ID." });
   }
 
-  if (targetNote.authorId !== req.userId) {
+  if (targetNote.authorId !== req.user) {
     return res.status(401).send({ message: "Access is denied." });
   }
 

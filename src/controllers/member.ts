@@ -22,7 +22,7 @@ export const addProjectMembers = async (req: Request, res: Response) => {
     return res.status(404).send({ message: "Invalid project ID." });
   }
 
-  if (targetProject.createdById !== req.userId) {
+  if (targetProject.createdById !== req.user) {
     return res.status(401).send({ message: "Access is denied." });
   }
 
@@ -70,7 +70,7 @@ export const removeProjectMember = async (req: Request, res: Response) => {
     return res.status(404).send({ message: "Invalid project ID." });
   }
 
-  if (targetProject.createdById !== req.userId) {
+  if (targetProject.createdById !== req.user) {
     return res.status(401).send({ message: "Access is denied." });
   }
 
@@ -102,16 +102,16 @@ export const leaveProjectAsMember = async (req: Request, res: Response) => {
     return res.status(404).send({ message: "Invalid project ID." });
   }
 
-  if (targetProject.createdById === req.userId) {
+  if (targetProject.createdById === req.user) {
     return res.status(400).send({ message: "Project creator can't leave." });
   }
 
-  if (!targetProject.members.map((m) => m.memberId).includes(req.userId)) {
+  if (!targetProject.members.map((m) => m.memberId).includes(req.user)) {
     return res.status(404).send({
       message: "You're not a member of the project.",
     });
   }
 
-  await Member.delete({ projectId, memberId: req.userId });
+  await Member.delete({ projectId, memberId: req.user });
   res.status(204).end();
 };

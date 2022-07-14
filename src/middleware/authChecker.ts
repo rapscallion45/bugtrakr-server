@@ -25,8 +25,7 @@ const authChecker = (req: Request, res: Response, next: NextFunction) => {
         .send({ message: "Token verification failed. Authorization denied." });
     }
 
-    req.userId = decodedToken.id;
-    req.username = decodedToken.username;
+    req.user = decodedToken.id;
     next();
   } catch (error: any) {
     res.status(500).send({ message: error.message });
