@@ -26,6 +26,6 @@ module.exports = {
     migrationsDir:
       process.env.NODE_ENV === "test" ? "src/migration" : "build/migration",
   },
-  synchronize: true,
-  logging: true,
+  synchronize: false,
+  logging: false,
 };
