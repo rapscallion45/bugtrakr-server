@@ -26,6 +26,8 @@ module.exports = {
     migrationsDir:
       process.env.NODE_ENV === "test" ? "src/migration" : "build/migration",
   },
+  ssl:
+    process.env.SSL_ENABLED !== "false" ? { rejectUnauthorized: false } : false,
   synchronize: false,
   logging: false,
 };
