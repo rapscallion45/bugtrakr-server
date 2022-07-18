@@ -1,36 +1,36 @@
-import { Request, Response } from 'express';
-import { Member } from '../entity/Member';
-import { Bug } from '../entity/Bug';
-import { Note } from '../entity/Note';
-import { Project } from '../entity/Project';
-import { createBugValidator } from '../utils/validators';
+import { Request, Response } from "express";
+import { Member } from "../entity/Member";
+import { Bug } from "../entity/Bug";
+import { Note } from "../entity/Note";
+import { Project } from "../entity/Project";
+import { createBugValidator } from "../utils/validators";
 
 const fieldsToSelect = [
-  'bug.id',
-  'bug.projectId',
-  'bug.title',
-  'bug.description',
-  'bug.priority',
-  'bug.isResolved',
-  'bug.createdAt',
-  'bug.updatedAt',
-  'bug.closedAt',
-  'bug.reopenedAt',
-  'createdBy.id',
-  'createdBy.username',
-  'updatedBy.id',
-  'updatedBy.username',
-  'closedBy.id',
-  'closedBy.username',
-  'reopenedBy.id',
-  'reopenedBy.username',
-  'note.id',
-  'note.bugId',
-  'note.body',
-  'note.createdAt',
-  'note.updatedAt',
-  'noteAuthor.id',
-  'noteAuthor.username',
+  "bug.id",
+  "bug.projectId",
+  "bug.title",
+  "bug.description",
+  "bug.priority",
+  "bug.isResolved",
+  "bug.createdAt",
+  "bug.updatedAt",
+  "bug.closedAt",
+  "bug.reopenedAt",
+  "createdBy.id",
+  "createdBy.username",
+  "updatedBy.id",
+  "updatedBy.username",
+  "closedBy.id",
+  "closedBy.username",
+  "reopenedBy.id",
+  "reopenedBy.username",
+  "note.id",
+  "note.bugId",
+  "note.body",
+  "note.createdAt",
+  "note.updatedAt",
+  "noteAuthor.id",
+  "noteAuthor.username",
 ];
 
 export const getBugs = async (req: Request, res: Response) => {
@@ -39,17 +39,34 @@ export const getBugs = async (req: Request, res: Response) => {
   const projectMembers = await Member.find({ projectId });
 
   if (!projectMembers.map((m) => m.memberId).includes(req.user)) {
-    return res.status(401).send({ message: 'Access is denied.' });
+    return res.status(401).send({ message: "Access is denied." });
   }
 
-  const bugs = await Bug.createQueryBuilder('bug')
+  const bugs = await Bug.createQueryBuilder("bug")
     .where('"projectId" = :projectId', { projectId })
-    .leftJoinAndSelect('bug.createdBy', 'createdBy')
-    .leftJoinAndSelect('bug.updatedBy', 'updatedBy')
-    .leftJoinAndSelect('bug.closedBy', 'closedBy')
-    .leftJoinAndSelect('bug.reopenedBy', 'reopenedBy')
-    .leftJoinAndSelect('bug.notes', 'note')
-    .leftJoinAndSelect('note.author', 'noteAuthor')
+    .leftJoinAndSelect("bug.createdBy", "createdBy")
+    .leftJoinAndSelect("bug.updatedBy", "updatedBy")
+    .leftJoinAndSelect("bug.closedBy", "closedBy")
+    .leftJoinAndSelect("bug.reopenedBy", "reopenedBy")
+    .leftJoinAndSelect("bug.notes", "note")
+    .leftJoinAndSelect("note.author", "noteAuthor")
+    .select(fieldsToSelect)
+    .getMany();
+
+  res.json(bugs);
+};
+
+export const getBugsByUser = async (req: Request, res: Response) => {
+  const { userId } = req.params;
+
+  const bugs = await Bug.createQueryBuilder("bug")
+    .where('"createdById" = :userId', { userId })
+    .leftJoinAndSelect("bug.createdBy", "createdBy")
+    .leftJoinAndSelect("bug.updatedBy", "updatedBy")
+    .leftJoinAndSelect("bug.closedBy", "closedBy")
+    .leftJoinAndSelect("bug.reopenedBy", "reopenedBy")
+    .leftJoinAndSelect("bug.notes", "note")
+    .leftJoinAndSelect("note.author", "noteAuthor")
     .select(fieldsToSelect)
     .getMany();
 
@@ -70,7 +87,7 @@ export const createBug = async (req: Request, res: Response) => {
   const memberIds = projectMembers.map((m) => m.memberId);
 
   if (!memberIds.includes(req.user)) {
-    return res.status(401).send({ message: 'Access is denied.' });
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   const newBug = Bug.create({
@@ -82,14 +99,14 @@ export const createBug = async (req: Request, res: Response) => {
   });
   await newBug.save();
 
-  const relationedBug = await Bug.createQueryBuilder('bug')
-    .where('bug.id = :bugId', { bugId: newBug.id })
-    .leftJoinAndSelect('bug.createdBy', 'createdBy')
-    .leftJoinAndSelect('bug.updatedBy', 'updatedBy')
-    .leftJoinAndSelect('bug.closedBy', 'closedBy')
-    .leftJoinAndSelect('bug.reopenedBy', 'reopenedBy')
-    .leftJoinAndSelect('bug.notes', 'note')
-    .leftJoinAndSelect('note.author', 'noteAuthor')
+  const relationedBug = await Bug.createQueryBuilder("bug")
+    .where("bug.id = :bugId", { bugId: newBug.id })
+    .leftJoinAndSelect("bug.createdBy", "createdBy")
+    .leftJoinAndSelect("bug.updatedBy", "updatedBy")
+    .leftJoinAndSelect("bug.closedBy", "closedBy")
+    .leftJoinAndSelect("bug.reopenedBy", "reopenedBy")
+    .leftJoinAndSelect("bug.notes", "note")
+    .leftJoinAndSelect("note.author", "noteAuthor")
     .select(fieldsToSelect)
     .getOne();
 
@@ -110,13 +127,13 @@ export const updateBug = async (req: Request, res: Response) => {
   const memberIds = projectMembers.map((m) => m.memberId);
 
   if (!memberIds.includes(req.user)) {
-    return res.status(401).send({ message: 'Access is denied.' });
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   const targetBug = await Bug.findOne({ id: bugId });
 
   if (!targetBug) {
-    return res.status(400).send({ message: 'Invalid bug ID.' });
+    return res.status(400).send({ message: "Invalid bug ID." });
   }
 
   targetBug.title = title;
@@ -126,14 +143,14 @@ export const updateBug = async (req: Request, res: Response) => {
   targetBug.updatedAt = new Date();
 
   await targetBug.save();
-  const relationedBug = await Bug.createQueryBuilder('bug')
-    .where('bug.id = :bugId', { bugId })
-    .leftJoinAndSelect('bug.createdBy', 'createdBy')
-    .leftJoinAndSelect('bug.updatedBy', 'updatedBy')
-    .leftJoinAndSelect('bug.closedBy', 'closedBy')
-    .leftJoinAndSelect('bug.reopenedBy', 'reopenedBy')
-    .leftJoinAndSelect('bug.notes', 'note')
-    .leftJoinAndSelect('note.author', 'noteAuthor')
+  const relationedBug = await Bug.createQueryBuilder("bug")
+    .where("bug.id = :bugId", { bugId })
+    .leftJoinAndSelect("bug.createdBy", "createdBy")
+    .leftJoinAndSelect("bug.updatedBy", "updatedBy")
+    .leftJoinAndSelect("bug.closedBy", "closedBy")
+    .leftJoinAndSelect("bug.reopenedBy", "reopenedBy")
+    .leftJoinAndSelect("bug.notes", "note")
+    .leftJoinAndSelect("note.author", "noteAuthor")
     .select(fieldsToSelect)
     .getOne();
 
@@ -148,20 +165,20 @@ export const deleteBug = async (req: Request, res: Response) => {
   });
 
   if (!targetProject) {
-    return res.status(404).send({ message: 'Invalid project ID.' });
+    return res.status(404).send({ message: "Invalid project ID." });
   }
 
   const targetBug = await Bug.findOne({ id: bugId });
 
   if (!targetBug) {
-    return res.status(404).send({ message: 'Invalid bug ID.' });
+    return res.status(404).send({ message: "Invalid bug ID." });
   }
 
   if (
     targetProject.createdById !== req.user &&
     targetBug.createdById !== req.user
   ) {
-    return res.status(401).send({ message: 'Access is denied.' });
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   await Note.delete({ bugId });
@@ -176,19 +193,19 @@ export const closeBug = async (req: Request, res: Response) => {
   const memberIds = projectMembers.map((m) => m.memberId);
 
   if (!memberIds.includes(req.user)) {
-    return res.status(401).send({ message: 'Access is denied.' });
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   const targetBug = await Bug.findOne({ id: bugId });
 
   if (!targetBug) {
-    return res.status(400).send({ message: 'Invalid bug ID.' });
+    return res.status(400).send({ message: "Invalid bug ID." });
   }
 
   if (targetBug.isResolved === true) {
     return res
       .status(400)
-      .send({ message: 'Bug is already marked as closed.' });
+      .send({ message: "Bug is already marked as closed." });
   }
 
   targetBug.isResolved = true;
@@ -198,14 +215,14 @@ export const closeBug = async (req: Request, res: Response) => {
   targetBug.reopenedAt = null;
 
   await targetBug.save();
-  const relationedBug = await Bug.createQueryBuilder('bug')
-    .where('bug.id = :bugId', { bugId })
-    .leftJoinAndSelect('bug.createdBy', 'createdBy')
-    .leftJoinAndSelect('bug.updatedBy', 'updatedBy')
-    .leftJoinAndSelect('bug.closedBy', 'closedBy')
-    .leftJoinAndSelect('bug.reopenedBy', 'reopenedBy')
-    .leftJoinAndSelect('bug.notes', 'note')
-    .leftJoinAndSelect('note.author', 'noteAuthor')
+  const relationedBug = await Bug.createQueryBuilder("bug")
+    .where("bug.id = :bugId", { bugId })
+    .leftJoinAndSelect("bug.createdBy", "createdBy")
+    .leftJoinAndSelect("bug.updatedBy", "updatedBy")
+    .leftJoinAndSelect("bug.closedBy", "closedBy")
+    .leftJoinAndSelect("bug.reopenedBy", "reopenedBy")
+    .leftJoinAndSelect("bug.notes", "note")
+    .leftJoinAndSelect("note.author", "noteAuthor")
     .select(fieldsToSelect)
     .getOne();
 
@@ -219,19 +236,19 @@ export const reopenBug = async (req: Request, res: Response) => {
   const memberIds = projectMembers.map((m) => m.memberId);
 
   if (!memberIds.includes(req.user)) {
-    return res.status(401).send({ message: 'Access is denied.' });
+    return res.status(401).send({ message: "Access is denied." });
   }
 
   const targetBug = await Bug.findOne({ id: bugId });
 
   if (!targetBug) {
-    return res.status(400).send({ message: 'Invalid bug ID.' });
+    return res.status(400).send({ message: "Invalid bug ID." });
   }
 
   if (targetBug.isResolved === false) {
     return res
       .status(400)
-      .send({ message: 'Bug is already marked as opened.' });
+      .send({ message: "Bug is already marked as opened." });
   }
 
   targetBug.isResolved = false;
@@ -241,14 +258,14 @@ export const reopenBug = async (req: Request, res: Response) => {
   targetBug.closedAt = null;
 
   await targetBug.save();
-  const relationedBug = await Bug.createQueryBuilder('bug')
-    .where('bug.id = :bugId', { bugId })
-    .leftJoinAndSelect('bug.createdBy', 'createdBy')
-    .leftJoinAndSelect('bug.updatedBy', 'updatedBy')
-    .leftJoinAndSelect('bug.closedBy', 'closedBy')
-    .leftJoinAndSelect('bug.reopenedBy', 'reopenedBy')
-    .leftJoinAndSelect('bug.notes', 'note')
-    .leftJoinAndSelect('note.author', 'noteAuthor')
+  const relationedBug = await Bug.createQueryBuilder("bug")
+    .where("bug.id = :bugId", { bugId })
+    .leftJoinAndSelect("bug.createdBy", "createdBy")
+    .leftJoinAndSelect("bug.updatedBy", "updatedBy")
+    .leftJoinAndSelect("bug.closedBy", "closedBy")
+    .leftJoinAndSelect("bug.reopenedBy", "reopenedBy")
+    .leftJoinAndSelect("bug.notes", "note")
+    .leftJoinAndSelect("note.author", "noteAuthor")
     .select(fieldsToSelect)
     .getOne();
 

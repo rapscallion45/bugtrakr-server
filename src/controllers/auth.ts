@@ -93,3 +93,27 @@ export const loginUser = async (req: Request, res: Response) => {
     token,
   });
 };
+
+export const authenticateUser = async (req: Request, res: Response) => {
+  const { user } = req;
+
+  const userData = await User.findOne({
+    where: { id: user },
+  });
+
+  if (!userData) {
+    return res.status(401).send({
+      message: `User not found.`,
+    });
+  }
+
+  const token = jwt.sign(
+    { id: userData.id, username: userData.username },
+    JWT_SECRET
+  );
+  return res.status(201).json({
+    id: userData.id,
+    username: userData.username,
+    token,
+  });
+};
