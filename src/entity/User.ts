@@ -17,4 +17,19 @@ export class User extends BaseModel {
 
   @Column()
   lastName: string;
+
+  @Column({ nullable: true })
+  verified: boolean;
+
+  @Column({ type: "text", nullable: true })
+  emailVerificationCodeHash: string;
+
+  @Column({ type: "timestamp", nullable: true })
+  emailVerificationCodeExpires: Date;
+
+  @Column({ type: "text", nullable: true })
+  resetVerificationCodeHash: string;
+
+  @Column({ type: "timestamp", nullable: true })
+  resetVerificationCodeExpires: Date;
 }

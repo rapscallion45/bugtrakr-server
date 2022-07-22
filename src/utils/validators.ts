@@ -14,24 +14,39 @@ interface BugErrors {
   priority?: string;
 }
 
+interface ForgotPasswordErrors {
+  email?: string;
+}
+
+interface ResetPasswordErrors {
+  resetToken?: string;
+  password?: string;
+  email?: string;
+}
+
+interface ValidateTokenErrors {
+  token?: string;
+  email?: string;
+}
+
 export const registerValidator = (username: string, password: string) => {
   const errors: AuthErrors = {};
 
   if (
     !username ||
-    username.trim() === '' ||
+    username.trim() === "" ||
     username.length > 20 ||
     username.length < 3
   ) {
-    errors.username = 'Username must be in range of 3-20 characters length.';
+    errors.username = "Username must be in range of 3-20 characters length.";
   }
 
   if (!/^[a-zA-Z0-9-_]*$/.test(username)) {
-    errors.username = 'Username must have alphanumeric characters only.';
+    errors.username = "Username must have alphanumeric characters only.";
   }
 
   if (!password || password.length < 6) {
-    errors.password = 'Password must be atleast 6 characters long.';
+    errors.password = "Password must be at least 6 characters long.";
   }
 
   return {
@@ -43,12 +58,12 @@ export const registerValidator = (username: string, password: string) => {
 export const loginValidator = (username: string, password: string) => {
   const errors: AuthErrors = {};
 
-  if (!username || username.trim() === '') {
-    errors.username = 'Username field must not be empty.';
+  if (!username || username.trim() === "") {
+    errors.username = "Username field must not be empty.";
   }
 
   if (!password) {
-    errors.password = 'Password field must not be empty.';
+    errors.password = "Password field must not be empty.";
   }
 
   return {
@@ -58,22 +73,22 @@ export const loginValidator = (username: string, password: string) => {
 };
 
 export const projectNameError = (name: string) => {
-  if (!name || name.trim() === '' || name.length > 60) {
-    return 'Project name length must not be more than 60.';
+  if (!name || name.trim() === "" || name.length > 60) {
+    return "Project name length must not be more than 60.";
   }
 };
 
 export const projectMembersError = (members: string[]) => {
   if (!Array.isArray(members)) {
-    return 'Members field must be an array.';
+    return "Members field must be an array.";
   }
 
   if (members.filter((m, i) => members.indexOf(m) !== i).length !== 0) {
-    return 'Members field must not have already-added/duplicate IDs.';
+    return "Members field must not have already-added/duplicate IDs.";
   }
 
   if (members.some((m) => m.length !== 36)) {
-    return 'Members array must contain valid UUIDs.';
+    return "Members array must contain valid UUIDs.";
   }
 };
 
@@ -102,18 +117,73 @@ export const createBugValidator = (
   priority: string
 ) => {
   const errors: BugErrors = {};
-  const validPriorities = ['low', 'medium', 'high'];
+  const validPriorities = ["low", "medium", "high"];
 
-  if (!title || title.trim() === '' || title.length > 60 || title.length < 3) {
-    errors.title = 'Title must be in range of 3-60 characters length.';
+  if (!title || title.trim() === "" || title.length > 60 || title.length < 3) {
+    errors.title = "Title must be in range of 3-60 characters length.";
   }
 
-  if (!description || description.trim() === '') {
-    errors.description = 'Description field must not be empty.';
+  if (!description || description.trim() === "") {
+    errors.description = "Description field must not be empty.";
   }
 
   if (!priority || !validPriorities.includes(priority)) {
-    errors.priority = 'Priority can only be - low, medium or high.';
+    errors.priority = "Priority can only be - low, medium or high.";
+  }
+
+  return {
+    errors,
+    valid: Object.keys(errors).length < 1,
+  };
+};
+
+export const forgotPasswordValidator = (email: string) => {
+  const errors: ForgotPasswordErrors = {};
+
+  if (!email || email.trim() === "") {
+    errors.email = "Email not provided.";
+  }
+
+  return {
+    errors,
+    valid: Object.keys(errors).length < 1,
+  };
+};
+
+export const resetPasswordValidator = (
+  resetToken: string,
+  password: string,
+  email: string
+) => {
+  const errors: ResetPasswordErrors = {};
+
+  if (!resetToken || resetToken.length !== 6) {
+    errors.resetToken = "Reset token malformed.";
+  }
+
+  if (!password || password.length < 6) {
+    errors.password = "Password must be at least 6 characters long.";
+  }
+
+  if (!email || email.trim() === "") {
+    errors.email = "Email not provided.";
+  }
+
+  return {
+    errors,
+    valid: Object.keys(errors).length < 1,
+  };
+};
+
+export const tokenValidator = (token: string, email: string) => {
+  const errors: ValidateTokenErrors = {};
+
+  if (!email || email.trim() === "") {
+    errors.email = "Email not provided.";
+  }
+
+  if (!token || token.length !== 6) {
+    errors.token = "Token malformed.";
   }
 
   return {

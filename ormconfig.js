@@ -15,7 +15,11 @@ module.exports = {
       ? "src/entity/**/*.ts"
       : "build/entity/**/*.js",
   ],
-  migrations: ["build/migration/**/*.js"],
+  migrations: [
+    process.env.NODE_ENV === "test"
+      ? "src/migration/**/*.ts"
+      : "build/migration/**/*.js",
+  ],
   cli: {
     entitiesDir:
       process.env.NODE_ENV === "test" ? "src/entity" : "build/entity",
