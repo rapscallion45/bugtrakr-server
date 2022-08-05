@@ -2,6 +2,7 @@ import express from "express";
 import {
   signupUser,
   loginUser,
+  loginWithGoogle,
   changePassword,
   resetPassword,
   validateResetToken,
@@ -14,6 +15,7 @@ const router = express.Router();
 
 router.post("/signup", signupUser);
 router.post("/login", loginUser);
+router.post("/login-google", loginWithGoogle);
 router.post("/change-password", changePassword);
 router.post("/reset-password", resetPassword);
 router.post("/validate-reset-token", validateResetToken);

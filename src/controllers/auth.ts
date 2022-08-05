@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
+import { OAuth2Client } from "google-auth-library";
 import { User } from "../entity/User";
 import jwt from "jsonwebtoken";
+import generator from "generate-password";
 import bcrypt from "bcrypt";
 import { JWT_SECRET } from "../utils/config";
 import {
@@ -9,6 +11,7 @@ import {
   forgotPasswordValidator,
   resetPasswordValidator,
   tokenValidator,
+  googleIdTokenValidator,
 } from "../utils/validators";
 
 export const signupUser = async (req: Request, res: Response) => {
@@ -103,6 +106,95 @@ export const loginUser = async (req: Request, res: Response) => {
   return res.status(201).json({
     id: user.id,
     username: user.username,
+    token,
+  });
+};
+
+export const loginWithGoogle = async (req: Request, res: Response) => {
+  const { tokenId } = req.body;
+  const client = new OAuth2Client();
+  const { errors, valid } = await googleIdTokenValidator(tokenId);
+
+  if (!valid) {
+    return res.status(400).send({ message: Object.values(errors)[0] });
+  }
+
+  /* verify the token is a genuine token from Google using OAuth2 lib */
+  async function verify(idToken: string) {
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    return ticket.getPayload();
+  }
+  const googleUser = await verify(tokenId).catch(console.error);
+
+  if (!googleUser || !googleUser.email || !googleUser.email_verified) {
+    return res.status(401).send({
+      message: `We could not verify your Google account.`,
+    });
+  }
+
+  const account = await User.findOne({
+    where: `"email" ILIKE '${googleUser.email}'`,
+  });
+
+  /* check for existing user */
+  if (!account) {
+    /* no user found, therefore create new account, auto generating fields */
+    const passwordSaltRounds = 10;
+    const passwordHash = await bcrypt.hash(
+      generator.generate({
+        length: 10,
+        numbers: true,
+      }),
+      passwordSaltRounds
+    );
+    const user = User.create({
+      username:
+        (googleUser.given_name?.toLowerCase() ||
+          generator.generate({
+            length: 10,
+            numbers: false,
+          })) + Math.floor(10000 + Math.random() * 90000),
+      email: googleUser.email,
+      passwordHash,
+      firstName: googleUser.given_name || "user",
+      lastName: googleUser.family_name || "",
+      verified: true,
+    });
+    await user.save();
+
+    const createdAccount = await User.findOne({
+      where: `"email" ILIKE '${googleUser.email}'`,
+    });
+
+    /* error check to make sure user has been saved successfully */
+    if (createdAccount) {
+      /* log new user in */
+      const token = jwt.sign(
+        { id: createdAccount.id, username: createdAccount.username },
+        JWT_SECRET
+      );
+      return res.status(201).json({
+        id: createdAccount.id,
+        username: createdAccount.username,
+        token,
+      });
+    }
+    return res.status(401).send({
+      message: `There was an error creating your account.`,
+    });
+  }
+
+  /* existing user found, log the user in */
+  const token = jwt.sign(
+    { id: account.id, username: account.username },
+    JWT_SECRET
+  );
+  return res.status(201).json({
+    id: account.id,
+    username: account.username,
     token,
   });
 };

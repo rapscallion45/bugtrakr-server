@@ -29,6 +29,10 @@ interface ValidateTokenErrors {
   email?: string;
 }
 
+interface ValidateGoogleTokenErrors {
+  idToken?: string;
+}
+
 export const registerValidator = (username: string, password: string) => {
   const errors: AuthErrors = {};
 
@@ -184,6 +188,19 @@ export const tokenValidator = (token: string, email: string) => {
 
   if (!token || token.length !== 6) {
     errors.token = "Token malformed.";
+  }
+
+  return {
+    errors,
+    valid: Object.keys(errors).length < 1,
+  };
+};
+
+export const googleIdTokenValidator = async (idToken: string) => {
+  const errors: ValidateGoogleTokenErrors = {};
+
+  if (!idToken) {
+    errors.idToken = "Token not provided.";
   }
 
   return {
