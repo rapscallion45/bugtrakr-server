@@ -19,3 +19,33 @@ export const getUserById = async (req: Request, res: Response) => {
 
   res.json(user);
 };
+
+export const updateUserById = async (req: Request, res: Response) => {
+  const { firstName, lastName, email } = req.body;
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).send({ message: "No account ID supplied." });
+  }
+
+  if (id !== req.user) {
+    return res
+      .status(401)
+      .send({ message: "You are not authorized to perform this operation." });
+  }
+
+  const account = await User.findOne({ id });
+
+  if (!account) {
+    return res.status(401).send({ message: "Account not found." });
+  }
+
+  account.firstName = firstName ?? account.firstName;
+  account.lastName = lastName ?? account.lastName;
+  account.email = email ?? account.email;
+  account.updatedAt = new Date();
+
+  await account.save();
+
+  return res.status(201).json(account);
+};
