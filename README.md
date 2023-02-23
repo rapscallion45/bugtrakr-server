@@ -1,10 +1,10 @@
-# BugTrakr | Postgres-TypeScript Server
+# BugTrakr | PostgreSQL-TypeScript Server
 
-Bug tracking app backend made with Postgres + Express + TS
+Bug tracking app backend made with Postgres + Express + TS (PERN)
 
 ## Demo
 
-[Deployed on Vercel (front-end) & Heroku (back-end)](https://bugtrakr.vercel.app)
+[Deployed on Vercel (front-end) & Railway (back-end)](https://bugtrakr.vercel.app)
 
 ## Server built using
 
