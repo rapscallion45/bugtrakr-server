@@ -7,6 +7,7 @@ const database = process.env.TYPEORM_DATABASE || "bugtrakr";
 
 module.exports = {
   type,
+  driver: require("pg"),
   url:
     process.env.DATABASE_URL ||
     `${type}://${username}:${password}@${host}:${port}/${database}`,
@@ -28,6 +29,7 @@ module.exports = {
   },
   ssl:
     process.env.SSL_ENABLED !== "false" ? { rejectUnauthorized: false } : false,
+  extra: { max: 3 },
   synchronize: false,
   logging: false,
 };

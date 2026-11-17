@@ -6,6 +6,9 @@ export class User extends BaseModel {
   @Column({ type: "varchar", length: 20 })
   username: string;
 
+  @Column({ type: "varchar", nullable: true, unique: true })
+  githubId: string | null;
+
   @Column()
   passwordHash: string;
 
@@ -28,8 +31,8 @@ export class User extends BaseModel {
   emailVerificationCodeExpires: Date;
 
   @Column({ type: "text", nullable: true })
-  resetVerificationCodeHash: string;
+  resetVerificationCodeHash: string | null;
 
   @Column({ type: "timestamp", nullable: true })
-  resetVerificationCodeExpires: Date;
+  resetVerificationCodeExpires: Date | null;
 }

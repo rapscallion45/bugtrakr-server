@@ -1,4 +1,6 @@
+import "reflect-metadata";
 import express from "express";
+import { connectToDB } from "./db";
 import cors from "cors";
 import "express-async-errors";
 import middleware from "./middleware";
@@ -14,6 +16,24 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.use(async (_req, res, next) => {
+  try {
+    await connectToDB();
+    next();
+  } catch {
+    res.status(503).json({ message: "Database temporarily unavailable." });
+  }
+});
+
+app.get("/healthz", async (_req, res) => {
+  try {
+    await (await connectToDB()).query("SELECT 1");
+    res.json({ status: "ok" });
+  } catch {
+    res.status(503).json({ status: "unavailable" });
+  }
+});
 
 app.use("/", authRoutes);
 app.use("/users", userRoutes);

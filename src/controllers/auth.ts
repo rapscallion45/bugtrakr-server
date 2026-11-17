@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { OAuth2Client } from "google-auth-library";
 import { User } from "../entity/User";
+import { randomInt } from "crypto";
+import { sendRecoveryCode, sendVerificationCode } from "../utils/mail";
+import { getManager, Raw } from "typeorm";
 import jwt from "jsonwebtoken";
 import generator from "generate-password";
 import bcrypt from "bcrypt";
@@ -23,7 +26,7 @@ export const signupUser = async (req: Request, res: Response) => {
   }
 
   const existingUser = await User.findOne({
-    where: `"username" ILIKE '${username}'`,
+    where: { username: Raw(alias => `LOWER(${alias}) = LOWER(:username)`, { username }) },
   });
 
   if (existingUser) {
@@ -32,9 +35,7 @@ export const signupUser = async (req: Request, res: Response) => {
       .send({ message: `Username '${username}' is already taken.` });
   }
 
-  const existingEmail = await User.findOne({
-    where: `"email" ILIKE '${email}'`,
-  });
+  const existingEmail = await findAccountByEmail(email);
 
   if (existingEmail) {
     return res
@@ -46,7 +47,7 @@ export const signupUser = async (req: Request, res: Response) => {
   const passwordHash = await bcrypt.hash(password, passwordSaltRounds);
 
   const emailVerificationSaltRounds = 10;
-  const emailVerificationCode = Math.floor(100000 + Math.random() * 900000);
+  const emailVerificationCode = randomInt(100000, 1000000);
   const emailVerificationCodeHash = await bcrypt.hash(
     emailVerificationCode.toString(),
     emailVerificationSaltRounds
@@ -64,10 +65,10 @@ export const signupUser = async (req: Request, res: Response) => {
       new Date().getTime() + 24 * 60 * 60 * 1000
     ),
   });
-  await user.save();
-
-  console.log("email verify code:");
-  console.log(emailVerificationCode);
+  await getManager().transaction(async (manager) => {
+    await manager.save(user);
+    await sendVerificationCode(user.email, String(emailVerificationCode));
+  });
 
   return res.status(201).json({
     message:
@@ -85,7 +86,7 @@ export const loginUser = async (req: Request, res: Response) => {
   }
 
   const user = await User.findOne({
-    where: `"username" ILIKE '${username}'`,
+    where: { username: Raw(alias => `LOWER(${alias}) = LOWER(:username)`, { username }) },
   });
 
   if (!user) {
@@ -112,6 +113,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
 export const loginWithGoogle = async (req: Request, res: Response) => {
   const { tokenId } = req.body;
+  if (!process.env.GOOGLE_CLIENT_ID) return res.status(503).json({ message: "Google sign-in is not configured." });
   const client = new OAuth2Client();
   const { errors, valid } = await googleIdTokenValidator(tokenId);
 
@@ -135,9 +137,7 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
     });
   }
 
-  const account = await User.findOne({
-    where: `"email" ILIKE '${googleUser.email}'`,
-  });
+  const account = await findAccountByEmail(googleUser.email);
 
   /* check for existing user */
   if (!account) {
@@ -165,9 +165,7 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
     });
     await user.save();
 
-    const createdAccount = await User.findOne({
-      where: `"email" ILIKE '${googleUser.email}'`,
-    });
+    const createdAccount = await findAccountByEmail(googleUser.email);
 
     /* error check to make sure user has been saved successfully */
     if (createdAccount) {
@@ -223,6 +221,18 @@ export const authenticateUser = async (req: Request, res: Response) => {
   });
 };
 
+function findAccountByEmail(email: string) {
+  return User.findOne({
+    where: { email: Raw(alias => `LOWER(${alias}) = LOWER(:email)`, { email }) },
+  });
+}
+
+async function validRecoveryCode(account: User, code: string) {
+  return Boolean(account.resetVerificationCodeHash && account.resetVerificationCodeExpires &&
+    account.resetVerificationCodeExpires > new Date() &&
+    await bcrypt.compare(code, account.resetVerificationCodeHash));
+}
+
 export const changePassword = async (req: Request, res: Response) => {
   const { email } = req.body;
   const { errors, valid } = forgotPasswordValidator(email);
@@ -231,9 +241,7 @@ export const changePassword = async (req: Request, res: Response) => {
     return res.status(400).send({ message: Object.values(errors)[0] });
   }
 
-  const account = await User.findOne({
-    where: `"email" ILIKE '${email}'`,
-  });
+  const account = await findAccountByEmail(email);
 
   if (!account) {
     return res.status(401).send({
@@ -241,8 +249,12 @@ export const changePassword = async (req: Request, res: Response) => {
     });
   }
 
+  if (account.username === (process.env.DEMO_LOGIN_USERNAME || "demo")) {
+    return res.status(403).json({ message: "Password recovery is disabled for the demo account." });
+  }
+
   const saltRounds = 10;
-  const resetVerificationCode = Math.floor(100000 + Math.random() * 900000);
+  const resetVerificationCode = randomInt(100000, 1000000);
   const resetVerificationCodeHash = await bcrypt.hash(
     resetVerificationCode.toString(),
     saltRounds
@@ -254,10 +266,8 @@ export const changePassword = async (req: Request, res: Response) => {
     new Date().getTime() + 5 * 60 * 1000
   );
 
-  console.log("reset password code:");
-  console.log(resetVerificationCode);
-
   await account.save();
+  await sendRecoveryCode(account.email, String(resetVerificationCode));
 
   return res.status(201).json({
     message: `A password reset verification code has been sent to '${email}'.`,
@@ -273,9 +283,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     return res.status(400).send({ message: Object.values(errors)[0] });
   }
 
-  const account = await User.findOne({
-    where: `"email" ILIKE '${email}'`,
-  });
+  const account = await findAccountByEmail(email);
 
   if (!account) {
     return res.status(401).send({
@@ -283,20 +291,23 @@ export const resetPassword = async (req: Request, res: Response) => {
     });
   }
 
-  const tokenValid = await bcrypt.compare(
-    resetToken,
-    account.resetVerificationCodeHash
-  );
+  if (account.username === (process.env.DEMO_LOGIN_USERNAME || "demo")) {
+    return res.status(403).json({ message: "Password recovery is disabled for the demo account." });
+  }
 
-  if (!tokenValid) {
+  if (!(await validRecoveryCode(account, resetToken))) {
     return res.status(401).send({ message: "Invalid reset code." });
   }
 
   const passwordSaltRounds = 10;
   const passwordHash = await bcrypt.hash(password, passwordSaltRounds);
 
-  account.passwordHash = passwordHash;
-  await account.save();
+  const updated = await User.createQueryBuilder().update().set({
+    passwordHash, resetVerificationCodeHash: null, resetVerificationCodeExpires: null,
+  }).where("id = :id", { id: account.id })
+    .andWhere('"resetVerificationCodeHash" = :hash', { hash: account.resetVerificationCodeHash })
+    .andWhere('"resetVerificationCodeExpires" > CURRENT_TIMESTAMP').execute();
+  if (!updated.affected) return res.status(401).json({ message: "Reset code expired or invalid." });
 
   return res.status(200).json({
     message: `Password updated successfully.`,
@@ -311,9 +322,7 @@ export const validateResetToken = async (req: Request, res: Response) => {
     return res.status(400).send({ message: Object.values(errors)[0] });
   }
 
-  const account = await User.findOne({
-    where: `"email" ILIKE '${email}'`,
-  });
+  const account = await findAccountByEmail(email);
 
   if (!account) {
     return res.status(401).send({
@@ -321,17 +330,15 @@ export const validateResetToken = async (req: Request, res: Response) => {
     });
   }
 
-  const tokenValid = await bcrypt.compare(
-    resetToken,
-    account.resetVerificationCodeHash
-  );
+  if (account.username === (process.env.DEMO_LOGIN_USERNAME || "demo")) {
+    return res.status(403).json({ message: "Password recovery is disabled for the demo account." });
+  }
 
-  if (!tokenValid) {
+  if (!(await validRecoveryCode(account, resetToken))) {
     return res.status(401).send({ message: "Invalid reset code." });
   }
 
-  account.verified = true;
-  await account.save();
+  if (!account.verified) await User.update(account.id, { verified: true });
 
   return res.status(200).json({
     message: `Token valid.`,
@@ -346,9 +353,7 @@ export const verifyEmailToken = async (req: Request, res: Response) => {
     return res.status(400).send({ message: Object.values(errors)[0] });
   }
 
-  const account = await User.findOne({
-    where: `"email" ILIKE '${email}'`,
-  });
+  const account = await findAccountByEmail(email);
 
   if (!account) {
     return res.status(401).send({
@@ -360,6 +365,10 @@ export const verifyEmailToken = async (req: Request, res: Response) => {
     return res.status(400).send({
       message: `This account has already been verified.`,
     });
+  }
+
+  if (!account.emailVerificationCodeExpires || account.emailVerificationCodeExpires <= new Date()) {
+    return res.status(400).send({ message: "Verification code expired. Recover your account using Forgot Password." });
   }
 
   const tokenValid = await bcrypt.compare(

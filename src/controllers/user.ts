@@ -40,6 +40,9 @@ export const updateUserById = async (req: Request, res: Response) => {
     return res.status(401).send({ message: "Account not found." });
   }
 
+  if (account.username === (process.env.DEMO_LOGIN_USERNAME || "demo")) {
+    return res.status(403).json({ message: "The public demo profile cannot be changed." });
+  }
   account.firstName = firstName ?? account.firstName;
   account.lastName = lastName ?? account.lastName;
   account.email = email ?? account.email;
@@ -47,5 +50,6 @@ export const updateUserById = async (req: Request, res: Response) => {
 
   await account.save();
 
-  return res.status(201).json(account);
+  const { username, email: savedEmail, firstName: savedFirst, lastName: savedLast } = account;
+  return res.status(201).json({ id, username, email: savedEmail, firstName: savedFirst, lastName: savedLast });
 };

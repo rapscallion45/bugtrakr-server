@@ -2,11 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../utils/config";
 
-interface TokenInterface {
-  id: string;
-  username: string;
-}
-
 const authChecker = (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.header("x-auth-token");
@@ -17,9 +12,9 @@ const authChecker = (req: Request, res: Response, next: NextFunction) => {
         .send({ message: "No auth token found. Authorization denied." });
     }
 
-    const decodedToken = jwt.verify(token, JWT_SECRET) as TokenInterface;
+    const decodedToken = jwt.verify(token, JWT_SECRET);
 
-    if (!decodedToken.id) {
+    if (typeof decodedToken === "string" || typeof decodedToken.id !== "string" || !decodedToken.id) {
       return res
         .status(401)
         .send({ message: "Token verification failed. Authorization denied." });
@@ -27,8 +22,8 @@ const authChecker = (req: Request, res: Response, next: NextFunction) => {
 
     req.user = decodedToken.id;
     next();
-  } catch (error: any) {
-    res.status(500).send({ message: error.message });
+  } catch {
+    return res.status(401).send({ message: "Token verification failed. Authorization denied." });
   }
 };
 

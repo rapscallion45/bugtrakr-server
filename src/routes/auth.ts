@@ -1,3 +1,4 @@
+import { loginWithGitHub } from "../controllers/github";
 import express from "express";
 import {
   signupUser,
@@ -15,6 +16,7 @@ const router = express.Router();
 
 router.post("/signup", signupUser);
 router.post("/login", loginUser);
+router.post("/login-github", loginWithGitHub);
 router.post("/login-google", loginWithGoogle);
 router.post("/change-password", changePassword);
 router.post("/reset-password", resetPassword);
